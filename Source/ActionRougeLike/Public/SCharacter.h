@@ -18,6 +18,9 @@ class ACTIONROUGELIKE_API ASCharacter : public ACharacter
 	GENERATED_BODY()	
 
 	//boilerplate样板文件的宏定义
+protected:
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<AActor> projectileClass;// * TSubclassOf is a Template to allow TClassType's to be passed around with type safety 
 
 public:
 	// Sets default values for this character's properties
@@ -28,10 +31,17 @@ protected:
 	USpringArmComponent* springArmComp;
 	UPROPERTY(VisibleAnywhere)
 	UCameraComponent* cameraComp;
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 	void OnMoveForward(float value);
+
+	void OnMoveRight(float value);
+
+	void PrimaryAttack();
+
+	void Jump();
 
 public:	
 	// Called every frame
