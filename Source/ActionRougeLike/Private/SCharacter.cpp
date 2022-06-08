@@ -8,7 +8,10 @@
 #include <Camera/CameraComponent.h>
 #include <GameFramework/CharacterMovementComponent.h>
 #include "DrawDebugHelpers.h"
+#include <SInteractionComponent.h>
 //#include <Kismet/KismetMathLibrary.h>
+
+
 
 // Sets default values
 ASCharacter::ASCharacter()
@@ -16,14 +19,15 @@ ASCharacter::ASCharacter()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	springArmComp = CreateDefaultSubobject<USpringArmComponent>("SpringArmComp");
-	cameraComp = CreateDefaultSubobject<UCameraComponent>("CameraComp");
+	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>("SpringArmComp");
+	CameraComp = CreateDefaultSubobject<UCameraComponent>("CameraComp");
+	InteractComp = CreateDefaultSubobject<USInteractionComponent>("InteractComp");
 
-	springArmComp->SetupAttachment(RootComponent);
-	cameraComp->SetupAttachment(springArmComp);
-
+	SpringArmComp->SetupAttachment(RootComponent);
+	CameraComp->SetupAttachment(SpringArmComp);
+	
 	//使相机壁跟随控制旋转
-	springArmComp->bUsePawnControlRotation = true;
+	SpringArmComp->bUsePawnControlRotation = true;
 	//下述两条语句的bool值互斥,一个是旋转跟随运动方向，一个是yaw旋转匹配控制器的Yaw旋转
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	bUseControllerRotationYaw = false;
@@ -62,6 +66,15 @@ void ASCharacter::OnMoveRight(float value)
 
 void ASCharacter::PrimaryAttack()
 {
+	PlayAnimMontage(AttackAnim);
+
+	GetWorldTimerManager().SetTimer(TimerHandle,this,&ASCharacter::PrimaryAttack_TimeEclipse,0.2f);
+
+	//GetWorldTimerManager().ClearTimer(TimerHandle);
+}
+
+void ASCharacter::PrimaryAttack_TimeEclipse()
+{
 	FVector handLocation = GetMesh()->GetSocketLocation("Muzzle_04");
 
 	FTransform spawnTM = FTransform(GetControlRotation(), handLocation);
@@ -75,6 +88,15 @@ void ASCharacter::PrimaryAttack()
 void ASCharacter::Jump()
 {
 	ACharacter::Jump();
+}
+
+void ASCharacter::PrimaryInteract()
+{
+	if (InteractComp)
+	{
+		InteractComp->PrimaryInteract();
+	}
+
 }
 
 // Called every frame
@@ -113,5 +135,12 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 	PlayerInputComponent->BindAction("PrimaryAttack", IE_Pressed, this, &ASCharacter::PrimaryAttack);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASCharacter::Jump);
+
+	PlayerInputComponent->BindAction("PrimaryInteract", IE_Pressed, this, &ASCharacter::PrimaryInteract);
+}
+
+FVector ASCharacter::GetPawnViewLocation() const
+{
+	return CameraComp->GetComponentLocation();
 }
 

@@ -11,6 +11,7 @@
 //so the convention is to forward declare when possible.
 class USpringArmComponent;
 class UCameraComponent;
+class USInteractionComponent;
 
 UCLASS()
 class ACTIONROUGELIKE_API ASCharacter : public ACharacter
@@ -19,18 +20,28 @@ class ACTIONROUGELIKE_API ASCharacter : public ACharacter
 
 	//boilerplate样板文件的宏定义
 protected:
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere,Category = "Attack")
 	TSubclassOf<AActor> projectileClass;// * TSubclassOf is a Template to allow TClassType's to be passed around with type safety 
 
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		UAnimMontage* AttackAnim;
+
+	FTimerHandle TimerHandle;
+
+	void PrimaryAttack_TimeEclipse();
 public:
 	// Sets default values for this character's properties
 	ASCharacter();
 
 protected:
 	UPROPERTY(VisibleAnywhere)
-	USpringArmComponent* springArmComp;
+	USpringArmComponent* SpringArmComp;
+
 	UPROPERTY(VisibleAnywhere)
-	UCameraComponent* cameraComp;
+	UCameraComponent* CameraComp;
+
+	UPROPERTY(VisibleAnywhere)
+	USInteractionComponent* InteractComp;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -43,11 +54,17 @@ protected:
 
 	void Jump();
 
+	void PrimaryInteract();
+
+	virtual FVector GetPawnViewLocation() const override;
+
+
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+	
 };

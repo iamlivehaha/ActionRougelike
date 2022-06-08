@@ -5,6 +5,7 @@
 #include <Components/StaticMeshComponent.h>
 #include <PhysicsEngine/RadialForceComponent.h>
 #include "DrawDebugHelpers.h"
+#include <SMagicProjectile.h>
 
 // Sets default values
 ASRedBarrel::ASRedBarrel()
@@ -22,6 +23,9 @@ ASRedBarrel::ASRedBarrel()
 	radialForceComp->Radius = 600.0f;
 	/** If true, the impulse will ignore mass of objects and will always result in a fixed velocity change */
 	radialForceComp->bImpulseVelChange = true;
+
+	// Optional, default constructor of component already adds 4 object types to affect, excluding WorldDynamic
+	radialForceComp->AddCollisionChannelToAffect(ECC_WorldDynamic);
 }
 
 // Called when the game starts or when spawned
@@ -42,20 +46,24 @@ void ASRedBarrel::PostInitializeComponents()
 
 void ASRedBarrel::OnActorHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
-	radialForceComp->FireImpulse();
+	ASMagicProjectile* Projectile = Cast<ASMagicProjectile>(OtherActor);
+	if (Projectile)
+	{
+		radialForceComp->FireImpulse();
 
-	UE_LOG(LogTemp, Log, TEXT("OnActorHit in Explosive Barrel"));
+		UE_LOG(LogTemp, Log, TEXT("OnActorHit in Explosive Barrel"));
 
-	// %s = string
-	// %f = float
-	// logs: "OtherActor: MyActor_1, at gametime: 124.4" 
-	UE_LOG(LogTemp, Warning, TEXT("OtherActor: %s, at game time: %f"), *GetNameSafe(OtherActor), GetWorld()->TimeSeconds);
+		// %s = string
+		// %f = float
+		// logs: "OtherActor: MyActor_1, at gametime: 124.4" 
+		UE_LOG(LogTemp, Warning, TEXT("OtherActor: %s, at game time: %f"), *GetNameSafe(OtherActor), GetWorld()->TimeSeconds);
 
-	FString CombinedString = FString::Printf(TEXT("Hit at location: %s"), *Hit.ImpactPoint.ToString());
-	DrawDebugString(GetWorld(), Hit.ImpactPoint, CombinedString, nullptr, FColor::Green, 4.0f, true);
+		FString CombinedString = FString::Printf(TEXT("Hit at location: %s"), *Hit.ImpactPoint.ToString());
+		DrawDebugString(GetWorld(), Hit.ImpactPoint, CombinedString, nullptr, FColor::Green, 2.0f, true);
 
-	// Detailed info on logging in ue4
-	// https://nerivec.github.io/old-ue4-wiki/pages/logs-printing-messages-to-yourself-during-runtime.html
+		// Detailed info on logging in ue4
+		// https://nerivec.github.io/old-ue4-wiki/pages/logs-printing-messages-to-yourself-during-runtime.html
+	}
 }
 
 // Called every frame
