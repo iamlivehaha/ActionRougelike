@@ -69,10 +69,12 @@ void USInteractionComponent::PrimaryInteract()
 		AActor* HitActor = Hit.GetActor();
 		if (HitActor)
 		{
-			DrawDebugSphere(GetWorld(), Hit.ImpactPoint, Radius, 32, lineColor, false, 2);
+			DrawDebugSphere(GetWorld(), Hit.ImpactPoint, Radius, 32, lineColor, false, 2,0,0.3f);
 
-			ISGamePlayInterface* GameplayInterface = Cast<ISGamePlayInterface>(HitActor);
-			if (GameplayInterface)
+			////this is not suit for blueprint case
+			//ISGamePlayInterface* GameplayInterface = Cast<ISGamePlayInterface>(HitActor);
+
+			if (HitActor->Implements<USGamePlayInterface>())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("execute inteact action!"));
 
@@ -80,18 +82,20 @@ void USInteractionComponent::PrimaryInteract()
 				//quirk way to execute function
 				ISGamePlayInterface::Execute_Interact(HitActor, MyPawn);
 
+				//Debug
+				if (HitActor)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("HitActor: %s, at game time: %f"), *GetNameSafe(HitActor), GetWorld()->TimeSeconds);
+
+					FString CombinedString = FString::Printf(TEXT("Hit the object: %s"), *HitActor->GetName());
+					DrawDebugString(GetWorld(), Hit.ImpactPoint, CombinedString, nullptr, FColor::Green, 2.0f, true);
+				}
+
 				break;
 			}
 			
 		}
-		//Debug
-		if (HitActor)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("HitActor: %s, at game time: %f"), *GetNameSafe(HitActor), GetWorld()->TimeSeconds);
 
-			FString CombinedString = FString::Printf(TEXT("Hit the object: %s"), *HitActor->GetName());
-			DrawDebugString(GetWorld(), Hit.ImpactPoint, CombinedString, nullptr, FColor::Green, 2.0f, true);
-		}
 	}
 
 	//Debug

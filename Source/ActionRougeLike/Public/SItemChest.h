@@ -14,8 +14,10 @@ class ACTIONROUGELIKE_API ASItemChest : public AActor, public ISGamePlayInterfac
 
 public:
 	UPROPERTY(EditAnywhere)
-		float targetPitch;
+		FRotator targetRot;
 
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere)
+		bool IsOpen;
 	//BlueprintNativeEvent Provide a body named [FunctionName]_Implementation instead of [FunctionName];
 	void Interact_Implementation(APawn* InstigatorPawn);
 	
@@ -29,7 +31,7 @@ protected:
 
 	UPROPERTY(VisibleAnywhere)
 		UStaticMeshComponent* BaseMesh;
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere,BlueprintReadOnly)
 		UStaticMeshComponent* LidMesh;
 
 

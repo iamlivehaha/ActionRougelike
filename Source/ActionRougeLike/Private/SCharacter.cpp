@@ -9,6 +9,7 @@
 #include <GameFramework/CharacterMovementComponent.h>
 #include "DrawDebugHelpers.h"
 #include <SInteractionComponent.h>
+#include <Kismet/KismetMathLibrary.h>
 //#include <Kismet/KismetMathLibrary.h>
 
 
@@ -77,12 +78,50 @@ void ASCharacter::PrimaryAttack_TimeEclipse()
 {
 	FVector handLocation = GetMesh()->GetSocketLocation("Muzzle_04");
 
-	FTransform spawnTM = FTransform(GetControlRotation(), handLocation);
+	FVector Start;
+	FVector End;
+
+	FVector EyeLocation;
+	FRotator EyeRotation;
+
+	//GetOwner():Get the owner of this Actor, used primarily for network replication.
+	AActor* MyOwner = GetOwner();
+	MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
+	Start = EyeLocation;
+	End = EyeLocation + EyeRotation.Vector() * 3000;
+
+	FHitResult hit;
+	FCollisionObjectQueryParams ObjectQueryParams;
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldStatic);
+	GetWorld()->LineTraceSingleByObjectType(hit, Start,End,ObjectQueryParams);
+
 
 	FActorSpawnParameters spawnParams;
 	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	spawnParams.Instigator = this;
 
+	AActor* HitActor = hit.GetActor();
+
+	FVector ImpactLocation;
+
+	if (HitActor)
+	{
+		ImpactLocation = hit.ImpactPoint;
+	}
+	else
+	{
+		ImpactLocation = End;
+	}
+
+	FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(handLocation, ImpactLocation);
+
+	FTransform 	spawnTM;
+	spawnTM = FTransform(TargetRot, handLocation);
 	GetWorld()->SpawnActor<AActor>(projectileClass, spawnTM, spawnParams);
+
+	//UE_LOG(LogTemp, Warning, TEXT("HitActor: %s, at game time: %f"), *GetNameSafe(HitActor), GetWorld()->TimeSeconds);
+	//DrawDebugLine(MyOwner->GetWorld(), Start, End, FColor::Red, false, 3, 0, 2);
 }
 
 void ASCharacter::Jump()

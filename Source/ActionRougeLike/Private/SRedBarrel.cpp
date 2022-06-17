@@ -17,11 +17,17 @@ ASRedBarrel::ASRedBarrel()
 	staticMesh->SetSimulatePhysics(true);
 	staticMesh->SetCollisionProfileName("PhysicActor");
 
+
 	radialForceComp = CreateDefaultSubobject<URadialForceComponent>("RadialForceComp");
 	radialForceComp->SetupAttachment(staticMesh);
 	radialForceComp->ImpulseStrength = 2000.0f;
 	radialForceComp->Radius = 600.0f;
+
+	// Leaving this on applies small constant force via component 'tick' (Optional)
+	radialForceComp->SetAutoActivate(false);
+
 	/** If true, the impulse will ignore mass of objects and will always result in a fixed velocity change */
+	// Optional, ignores 'Mass' of other objects (if false, the impulse strength will be much higher to push most objects depending on Mass)
 	radialForceComp->bImpulseVelChange = true;
 
 	// Optional, default constructor of component already adds 4 object types to affect, excluding WorldDynamic
@@ -40,6 +46,7 @@ void ASRedBarrel::PostInitializeComponents()
 	// Don't forget to call parent function
 	Super::PostInitializeComponents();
 
+	//best to place bind function in PostInit func in case of any compile error
 	//动态代理(委托)绑定,在创建staticMesh对象后，绑定函数OnActorHit函数到其代理OnComponentHit事件上，OnActorHit函数执行具体的内容
 	staticMesh->OnComponentHit.AddDynamic(this, &ASRedBarrel::OnActorHit);
 }
@@ -56,6 +63,7 @@ void ASRedBarrel::OnActorHit(UPrimitiveComponent* HitComponent, AActor* OtherAct
 		// %s = string
 		// %f = float
 		// logs: "OtherActor: MyActor_1, at gametime: 124.4" 
+		//*GetNameSafe(HitActor) is safer than *HitActor->GetName()
 		UE_LOG(LogTemp, Warning, TEXT("OtherActor: %s, at game time: %f"), *GetNameSafe(OtherActor), GetWorld()->TimeSeconds);
 
 		FString CombinedString = FString::Printf(TEXT("Hit at location: %s"), *Hit.ImpactPoint.ToString());

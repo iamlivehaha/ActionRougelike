@@ -23,7 +23,7 @@ class ACTIONROUGELIKE_API ISGamePlayInterface
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
 	
-	// classes using this interface must implement ReactToHighNoon
-	UFUNCTION(BlueprintNativeEvent)// BlueprintNativeEvent is for both C++ and blueprint
+	// classes using this interface must implement 
+	UFUNCTION(BluePrintCallable,BlueprintNativeEvent)// BlueprintNativeEvent is for both C++ and blueprint
 		void Interact(APawn* InstigatorPawn);
 };
