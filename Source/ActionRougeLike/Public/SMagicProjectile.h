@@ -4,18 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include <SBasicProjectile.h>
 #include "SMagicProjectile.generated.h"
-class USphereComponent;
-class UProjectileMovementComponent;
-class UParticleSystemComponent;
+
 
 
 UCLASS()
-class ACTIONROUGELIKE_API ASMagicProjectile : public AActor
+class ACTIONROUGELIKE_API ASMagicProjectile : public ASBasicProjectile
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	ASMagicProjectile();
 
@@ -23,21 +22,13 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(BlueprintReadOnly,VisibleAnywhere)
-	USphereComponent* sphereComp;
-	UPROPERTY(BlueprintReadOnly,VisibleAnywhere)
-	UProjectileMovementComponent* movementComp;
-	UPROPERTY(BlueprintReadOnly,VisibleAnywhere)
-	UParticleSystemComponent* particleComp;
+	UFUNCTION()
+		void OnActorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	virtual void PostInitializeComponents() override;
 
-	// Must be marked with ufunction in order to 'bind' the event
-	// If you forget the parameters, try to trace the signature of OnComponentBeginOverlap
-	UFUNCTION()
-	void OnActorOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 

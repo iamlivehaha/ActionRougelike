@@ -65,16 +65,7 @@ void ASCharacter::OnMoveRight(float value)
 	AddMovementInput(rightVect, value);
 }
 
-void ASCharacter::PrimaryAttack()
-{
-	PlayAnimMontage(AttackAnim);
-
-	GetWorldTimerManager().SetTimer(TimerHandle,this,&ASCharacter::PrimaryAttack_TimeEclipse,0.2f);
-
-	//GetWorldTimerManager().ClearTimer(TimerHandle);
-}
-
-void ASCharacter::PrimaryAttack_TimeEclipse()
+FTransform ASCharacter::AimatTarget()
 {
 	FVector handLocation = GetMesh()->GetSocketLocation("Muzzle_04");
 
@@ -94,12 +85,8 @@ void ASCharacter::PrimaryAttack_TimeEclipse()
 	FCollisionObjectQueryParams ObjectQueryParams;
 	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
 	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldStatic);
-	GetWorld()->LineTraceSingleByObjectType(hit, Start,End,ObjectQueryParams);
+	GetWorld()->LineTraceSingleByObjectType(hit, Start, End, ObjectQueryParams);
 
-
-	FActorSpawnParameters spawnParams;
-	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	spawnParams.Instigator = this;
 
 	AActor* HitActor = hit.GetActor();
 
@@ -115,13 +102,74 @@ void ASCharacter::PrimaryAttack_TimeEclipse()
 	}
 
 	FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(handLocation, ImpactLocation);
-
-	FTransform 	spawnTM;
-	spawnTM = FTransform(TargetRot, handLocation);
-	GetWorld()->SpawnActor<AActor>(projectileClass, spawnTM, spawnParams);
-
+	 
 	//UE_LOG(LogTemp, Warning, TEXT("HitActor: %s, at game time: %f"), *GetNameSafe(HitActor), GetWorld()->TimeSeconds);
 	//DrawDebugLine(MyOwner->GetWorld(), Start, End, FColor::Red, false, 3, 0, 2);
+
+	return FTransform(TargetRot, handLocation);
+}
+
+void ASCharacter::PrimaryAttack()
+{
+	PlayAnimMontage(AttackAnim);
+
+	GetWorldTimerManager().SetTimer(TimerHandle,this,&ASCharacter::PrimaryAttack_TimeEclipse,0.2f);
+
+	//GetWorldTimerManager().ClearTimer(TimerHandle);
+}
+
+void ASCharacter::BlackholeAttack()
+{
+	PlayAnimMontage(AttackAnim);
+
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASCharacter::BlackholeAttack_TimeEclipse, 0.2f);
+
+	//GetWorldTimerManager().ClearTimer(TimerHandle);
+}
+
+void ASCharacter::Dash()
+{
+	PlayAnimMontage(AttackAnim);
+
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASCharacter::Dash_TimeEclipese, 0.2f);
+
+	//GetWorldTimerManager().ClearTimer(TimerHandle);
+}
+
+void ASCharacter::PrimaryAttack_TimeEclipse()
+{
+	FActorSpawnParameters spawnParams;
+	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	spawnParams.Instigator = this;
+
+	FTransform 	spawnTM;
+	spawnTM = AimatTarget();
+
+	GetWorld()->SpawnActor<AActor>(projectileClass, spawnTM, spawnParams);
+}
+
+void ASCharacter::BlackholeAttack_TimeEclipse()
+{
+	FActorSpawnParameters spawnParams;
+	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	spawnParams.Instigator = this;
+
+	FTransform 	spawnTM;
+	spawnTM = AimatTarget();
+
+	GetWorld()->SpawnActor<AActor>(BlackholeClass, spawnTM, spawnParams);
+}
+
+void ASCharacter::Dash_TimeEclipese()
+{
+	FActorSpawnParameters spawnParams;
+	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	spawnParams.Instigator = this;
+
+	FTransform 	spawnTM;
+	spawnTM = AimatTarget();
+
+	GetWorld()->SpawnActor<AActor>(DashProjectileClass, spawnTM, spawnParams);
 }
 
 void ASCharacter::Jump()
@@ -173,9 +221,11 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAxis("Lookup", this, &APawn::AddControllerPitchInput);
 
 	PlayerInputComponent->BindAction("PrimaryAttack", IE_Pressed, this, &ASCharacter::PrimaryAttack);
+	PlayerInputComponent->BindAction("BlackholeAttack", IE_Pressed, this, &ASCharacter::BlackholeAttack);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASCharacter::Jump);
 
 	PlayerInputComponent->BindAction("PrimaryInteract", IE_Pressed, this, &ASCharacter::PrimaryInteract);
+	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ASCharacter::Dash);
 }
 
 FVector ASCharacter::GetPawnViewLocation() const

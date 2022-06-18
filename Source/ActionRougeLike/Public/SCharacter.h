@@ -22,6 +22,12 @@ class ACTIONROUGELIKE_API ASCharacter : public ACharacter
 protected:
 	UPROPERTY(EditAnywhere,Category = "Attack")
 	TSubclassOf<AActor> projectileClass;// * TSubclassOf is a Template to allow TClassType's to be passed around with type safety 
+	
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		TSubclassOf<AActor> BlackholeClass;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		TSubclassOf<AActor> DashProjectileClass;
 
 	UPROPERTY(EditAnywhere, Category = "Attack")
 		UAnimMontage* AttackAnim;
@@ -29,6 +35,10 @@ protected:
 	FTimerHandle TimerHandle;
 
 	void PrimaryAttack_TimeEclipse();
+
+	void BlackholeAttack_TimeEclipse();
+
+	void Dash_TimeEclipese();
 public:
 	// Sets default values for this character's properties
 	ASCharacter();
@@ -50,7 +60,13 @@ protected:
 
 	void OnMoveRight(float value);
 
+	FTransform AimatTarget();
+
 	void PrimaryAttack();
+
+	void BlackholeAttack();
+
+	void Dash();
 
 	void Jump();
 
