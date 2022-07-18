@@ -4,12 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include <Sound/SoundCue.h>
 #include "SBasicProjectile.generated.h"
 class USphereComponent;
 class UProjectileMovementComponent;
 class UParticleSystemComponent;
+class UAudioComponent;
+class USoundCue;
+class UCameraShakeBase;
 
-UCLASS()
+UCLASS(ABSTRACT) // 'ABSTRACT' marks this class as incomplete, keeping this out of certain dropdowns windows like SpawnActor in Unreal Editor
 class ACTIONROUGELIKE_API ASBasicProjectile : public AActor
 {
 	GENERATED_BODY()
@@ -22,16 +26,38 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		USphereComponent* SphereComp;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UProjectileMovementComponent* movementComp;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UParticleSystemComponent* particleComp;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-		UParticleSystemComponent* EffectComp;
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Shake")
+		TSubclassOf<UCameraShakeBase> ImpactShake;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Shake")
+		float ImpactShakeInnerRadius;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects|Shake")
+		float ImpactShakeOuterRadius;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Effects")
 		UParticleSystem* ImpactVFX;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Effects")
+		USoundCue* ImpactSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+		float DamageAmount;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		USphereComponent* SphereComp;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Components")
+		UProjectileMovementComponent* movementComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UParticleSystemComponent* particleComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		UParticleSystemComponent* EffectComp;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+		UAudioComponent* AudioComp;
 
 	// 'virtual' so we can override this in child-classes
 	UFUNCTION()

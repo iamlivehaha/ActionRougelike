@@ -5,6 +5,8 @@
 #include <Components/SphereComponent.h>
 #include <Particles/ParticleSystemComponent.h>
 #include <GameFramework/ProjectileMovementComponent.h>
+#include <Kismet/GameplayStatics.h>
+#include <Components/AudioComponent.h>
 
 // Sets default values
 ASBasicProjectile::ASBasicProjectile()
@@ -22,11 +24,20 @@ ASBasicProjectile::ASBasicProjectile()
 	//sphereComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	//sphereComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 
+	DamageAmount = 20.f;
+
+	ImpactShakeInnerRadius = 0.0f;
+	ImpactShakeOuterRadius = 1500.0f;
+
 	particleComp = CreateDefaultSubobject<UParticleSystemComponent>("ParticleComp");
 	particleComp->SetupAttachment(RootComponent);
 
 	EffectComp = CreateDefaultSubobject<UParticleSystemComponent>("EffectComp");
 	EffectComp->SetupAttachment(RootComponent);
+
+	AudioComp = CreateDefaultSubobject<UAudioComponent>("AudioComp");
+	AudioComp->SetupAttachment(RootComponent);
+
 
 	movementComp = CreateDefaultSubobject<UProjectileMovementComponent>("MovementComp");
 	movementComp->InitialSpeed = 1000.0f;
@@ -54,7 +65,20 @@ void ASBasicProjectile::OnActorHit(UPrimitiveComponent* HitComponent, AActor* Ot
 
 void ASBasicProjectile::Explode_Implementation()
 {
+	// Check to make sure we aren't already being 'destroyed'
+	// Adding ensure to see if we encounter this situation at all
+	if (ensure(IsValid(this)))
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(this, ImpactVFX, GetActorLocation(), GetActorRotation());
+		
+		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
 
+		UGameplayStatics::PlayWorldCameraShake(GetWorld(), ImpactShake, GetActorLocation(), ImpactShakeInnerRadius, ImpactShakeOuterRadius);
+
+		UE_LOG(LogTemp, Warning, TEXT("Projectile Hit!"));
+
+		Destroy();
+	}
 }
 
 void ASBasicProjectile::PostInitializeComponents()

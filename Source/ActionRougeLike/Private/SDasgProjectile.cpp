@@ -19,7 +19,7 @@ ASDasgProjectile::ASDasgProjectile()
 	TeleportDelay = 0.2f;
 	DetonateDelay = 0.3f;
 
-	movementComp->InitialSpeed = 6000.f;
+	movementComp->InitialSpeed = 5000.f;
 
 	EffectComp->Deactivate();
 
@@ -36,17 +36,19 @@ void ASDasgProjectile::Explode_Implementation()
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactVFX, GetActorLocation(),GetActorRotation());
 
 	movementComp->StopMovementImmediately();
+	SetActorEnableCollision(false);
 
 	TeleportEffectComp->Activate(true);
 
-	GetWorldTimerManager().SetTimer(TimerHandle_DelayedDetonate, this, &ASDasgProjectile::TeleportInstigator, DetonateDelay);
+	FTimerHandle TimerHandle_DelayedTeleport;
+	GetWorldTimerManager().SetTimer(TimerHandle_DelayedTeleport, this, &ASDasgProjectile::TeleportInstigator, DetonateDelay);
 }
 
 void ASDasgProjectile::TeleportInstigator()
 {
 
 	AActor* InstigatorToTeleport = GetInstigator();
-	if (InstigatorToTeleport)
+	if (ensure(InstigatorToTeleport))
 	{
 		InstigatorToTeleport->TeleportTo(GetActorLocation(), InstigatorToTeleport->GetActorRotation());
 

@@ -12,17 +12,25 @@
 class USpringArmComponent;
 class UCameraComponent;
 class USInteractionComponent;
+class USAttributeComponent;
+
+enum class EProjectileSpawnLocation
+{
+	LHand,
+	RHand,
+	MagicRod
+};
 
 UCLASS()
 class ACTIONROUGELIKE_API ASCharacter : public ACharacter
 {
-	GENERATED_BODY()	
+	GENERATED_BODY()
 
-	//boilerplate样板文件的宏定义
+		//boilerplate样板文件的宏定义
 protected:
-	UPROPERTY(EditAnywhere,Category = "Attack")
-	TSubclassOf<AActor> projectileClass;// * TSubclassOf is a Template to allow TClassType's to be passed around with type safety 
-	
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		TSubclassOf<AActor> projectileClass;// * TSubclassOf is a Template to allow TClassType's to be passed around with type safety 
+
 	UPROPERTY(EditAnywhere, Category = "Attack")
 		TSubclassOf<AActor> BlackholeClass;
 
@@ -30,7 +38,24 @@ protected:
 		TSubclassOf<AActor> DashProjectileClass;
 
 	UPROPERTY(EditAnywhere, Category = "Attack")
-		UAnimMontage* AttackAnim;
+		UAnimMontage* PrimaryAttackAnim;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		UAnimMontage* BlackholeAttackAnim;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		UAnimMontage* DashAttackAnim;
+
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		float AttackAnimDelay;
+
+	/* Particle System played during attack animation */
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		UParticleSystem* CastingEffect;
+
+	/* Sound Effect to play (Can be Wave or Cue) */
+	UPROPERTY(EditAnywhere, Category = "Attack")
+		USoundBase* CastingSound;
 
 	FTimerHandle TimerHandle;
 
@@ -44,14 +69,17 @@ public:
 	ASCharacter();
 
 protected:
-	UPROPERTY(VisibleAnywhere)
-	USpringArmComponent* SpringArmComp;
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+		USpringArmComponent* SpringArmComp;
 
-	UPROPERTY(VisibleAnywhere)
-	UCameraComponent* CameraComp;
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+		UCameraComponent* CameraComp;
 
-	UPROPERTY(VisibleAnywhere)
-	USInteractionComponent* InteractComp;
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+		USInteractionComponent* InteractComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+		USAttributeComponent* AttributeComp;
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -60,13 +88,15 @@ protected:
 
 	void OnMoveRight(float value);
 
-	FTransform AimatTarget();
+	FTransform AimAtTarget(EProjectileSpawnLocation EAttackLoc);
 
 	void PrimaryAttack();
 
 	void BlackholeAttack();
 
-	void Dash();
+	void DashAttack();
+
+	void SpawnProjectile( TSubclassOf<AActor> ClassToSpawn, EProjectileSpawnLocation SpawnLoc);
 
 	void Jump();
 
@@ -74,13 +104,16 @@ protected:
 
 	virtual FVector GetPawnViewLocation() const override;
 
+	UFUNCTION()
+		void OnHealthChange(AActor* InstigatorActor, USAttributeComponent* Attricomp, float NewHealth, float Delta);
 
+	virtual void PostInitializeComponents() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
-	
+
 };

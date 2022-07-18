@@ -10,6 +10,9 @@
 #include "DrawDebugHelpers.h"
 #include <SInteractionComponent.h>
 #include <Kismet/KismetMathLibrary.h>
+#include <SAttributeComponent.h>
+#include <GameFramework/Actor.h>
+#include <Kismet/GameplayStatics.h>
 //#include <Kismet/KismetMathLibrary.h>
 
 
@@ -17,16 +20,17 @@
 // Sets default values
 ASCharacter::ASCharacter()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	SpringArmComp = CreateDefaultSubobject<USpringArmComponent>("SpringArmComp");
 	CameraComp = CreateDefaultSubobject<UCameraComponent>("CameraComp");
 	InteractComp = CreateDefaultSubobject<USInteractionComponent>("InteractComp");
+	AttributeComp = CreateDefaultSubobject<USAttributeComponent>("AttributeComp");
 
 	SpringArmComp->SetupAttachment(RootComponent);
 	CameraComp->SetupAttachment(SpringArmComp);
-	
+
 	//使相机壁跟随控制旋转
 	SpringArmComp->bUsePawnControlRotation = true;
 	//下述两条语句的bool值互斥,一个是旋转跟随运动方向，一个是yaw旋转匹配控制器的Yaw旋转
@@ -38,7 +42,15 @@ ASCharacter::ASCharacter()
 void ASCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	AttackAnimDelay = 0.2f;
+}
+
+void ASCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
 	
+	AttributeComp->OnHealthChange.AddDynamic(this, &ASCharacter::OnHealthChange);
 }
 
 void ASCharacter::OnMoveForward(float value)
@@ -60,116 +72,164 @@ void ASCharacter::OnMoveRight(float value)
 	//way1: use api
 	//FVector rightVect = UKismetMathLibrary::GetRightVector(controlRot);
 	//way2: use api content
-	FVector rightVect =  FRotationMatrix(controlRot).GetScaledAxis(EAxis::Y);
+	FVector rightVect = FRotationMatrix(controlRot).GetScaledAxis(EAxis::Y);
 
 	AddMovementInput(rightVect, value);
 }
 
-FTransform ASCharacter::AimatTarget()
+FTransform ASCharacter::AimAtTarget(EProjectileSpawnLocation EAttackLoc)
 {
-	FVector handLocation = GetMesh()->GetSocketLocation("Muzzle_04");
-
-	FVector Start;
-	FVector End;
-
-	FVector EyeLocation;
-	FRotator EyeRotation;
-
-	//GetOwner():Get the owner of this Actor, used primarily for network replication.
-	AActor* MyOwner = GetOwner();
-	MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
-	Start = EyeLocation;
-	End = EyeLocation + EyeRotation.Vector() * 3000;
-
-	FHitResult hit;
-	FCollisionObjectQueryParams ObjectQueryParams;
-	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
-	ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldStatic);
-	GetWorld()->LineTraceSingleByObjectType(hit, Start, End, ObjectQueryParams);
-
-
-	AActor* HitActor = hit.GetActor();
-
-	FVector ImpactLocation;
-
-	if (HitActor)
+	FVector handLocation;
+	FName HandSocketName;
+	switch (EAttackLoc)
 	{
-		ImpactLocation = hit.ImpactPoint;
-	}
-	else
-	{
-		ImpactLocation = End;
+	case EProjectileSpawnLocation::LHand:
+		handLocation = GetMesh()->GetSocketLocation("Muzzle_l");
+		HandSocketName = FName(TEXT("Muzzle_l"));
+		break;
+	case EProjectileSpawnLocation::RHand:
+		handLocation = GetMesh()->GetSocketLocation("Muzzle_r");
+		HandSocketName = FName(TEXT("Muzzle_r"));
+		break;
+	case EProjectileSpawnLocation::MagicRod:
+		handLocation = GetMesh()->GetSocketLocation("Muzzle_mr");
+		HandSocketName = FName(TEXT("Muzzle_mr"));
+		break;
+	default:
+		handLocation = GetMesh()->GetSocketLocation("Muzzle_l");
+		HandSocketName = FName(TEXT("Muzzle_l"));
+		break;
 	}
 
-	FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(handLocation, ImpactLocation);
-	 
-	//UE_LOG(LogTemp, Warning, TEXT("HitActor: %s, at game time: %f"), *GetNameSafe(HitActor), GetWorld()->TimeSeconds);
-	//DrawDebugLine(MyOwner->GetWorld(), Start, End, FColor::Red, false, 3, 0, 2);
+	//casting effects
+	UGameplayStatics::SpawnEmitterAttached(CastingEffect, GetMesh(), HandSocketName,FVector::ZeroVector,FRotator::ZeroRotator, EAttachLocation::SnapToTarget);
 
-	return FTransform(TargetRot, handLocation);
+	UGameplayStatics::SpawnSoundAttached(CastingSound, GetMesh());
+
+	#pragma region Old_AimAt
+		FVector Start;
+		FVector End;
+
+		FVector EyeLocation;
+		FRotator EyeRotation;
+
+		//GetOwner():Get the owner of this Actor, used primarily for network replication.
+		AActor* MyOwner = GetOwner();
+		MyOwner->GetActorEyesViewPoint(EyeLocation, EyeRotation);
+		Start = EyeLocation;
+		End = EyeLocation + EyeRotation.Vector() * 3000;
+
+		FHitResult hit;
+		FCollisionObjectQueryParams ObjectQueryParams;
+		ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+		ObjectQueryParams.AddObjectTypesToQuery(ECC_WorldStatic);
+		GetWorld()->LineTraceSingleByObjectType(hit, Start, End, ObjectQueryParams);
+
+
+		AActor* HitActor = hit.GetActor();
+
+		FVector ImpactLocation;
+
+		if (HitActor)
+		{
+			ImpactLocation = hit.ImpactPoint;
+		}
+		else
+		{
+			ImpactLocation = End;
+		}
+
+		FRotator ProjRotation = UKismetMathLibrary::FindLookAtRotation(handLocation, ImpactLocation);
+	#pragma endregion Old_AimAtWay
+
+	#pragma region New_AimAtWay
+		//FCollisionShape Shape;
+		//Shape.SetSphere(20.f);
+	
+		////ignore player
+		//FCollisionQueryParams Params;
+		//Params.AddIgnoredActor(this);
+	
+	
+		//FCollisionObjectQueryParams ObjColParams;
+		//ObjColParams.AddObjectTypesToQuery(ECC_WorldStatic);
+		//ObjColParams.AddObjectTypesToQuery(ECC_Pawn);
+		//ObjColParams.AddObjectTypesToQuery(ECC_WorldDynamic);
+	
+		//FVector TraceStart = CameraComp->GetComponentLocation();
+	
+		////endpoint far into lookat direction (but not too far)
+		//FVector TraceEnd = CameraComp->GetComponentLocation() + (GetControlRotation().Vector() * 5000);
+	
+		//FHitResult hit;
+	
+		//if (GetWorld()->SweepSingleByObjectType(hit,TraceStart,TraceEnd,FQuat::Identity,ObjColParams,Shape,Params))
+		//{
+		//	//overwirte TraceEnd with hit point
+		//	TraceEnd = hit.ImpactPoint;
+		//}
+	
+		//FRotator ProjRotation = FRotationMatrix::MakeFromX(TraceEnd - handLocation).Rotator();
+	
+	#pragma endregion New_AimAtWay
+
+		////UE_LOG(LogTemp, Warning, TEXT("HitActor: %s, at game time: %f"), *GetNameSafe(HitActor), GetWorld()->TimeSeconds);
+		////DrawDebugLine(MyOwner->GetWorld(), Start, End, FColor::Red, false, 3, 0, 2);
+
+	return FTransform(ProjRotation, handLocation);
 }
 
 void ASCharacter::PrimaryAttack()
 {
-	PlayAnimMontage(AttackAnim);
+	PlayAnimMontage(PrimaryAttackAnim);
 
-	GetWorldTimerManager().SetTimer(TimerHandle,this,&ASCharacter::PrimaryAttack_TimeEclipse,0.2f);
-
-	//GetWorldTimerManager().ClearTimer(TimerHandle);
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASCharacter::PrimaryAttack_TimeEclipse, AttackAnimDelay);
 }
 
 void ASCharacter::BlackholeAttack()
 {
-	PlayAnimMontage(AttackAnim);
+	PlayAnimMontage(BlackholeAttackAnim);
 
-	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASCharacter::BlackholeAttack_TimeEclipse, 0.2f);
-
-	//GetWorldTimerManager().ClearTimer(TimerHandle);
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASCharacter::BlackholeAttack_TimeEclipse, AttackAnimDelay);
 }
 
-void ASCharacter::Dash()
+void ASCharacter::DashAttack()
 {
-	PlayAnimMontage(AttackAnim);
+	PlayAnimMontage(DashAttackAnim);
 
-	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASCharacter::Dash_TimeEclipese, 0.2f);
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ASCharacter::Dash_TimeEclipese, AttackAnimDelay);
+}
 
-	//GetWorldTimerManager().ClearTimer(TimerHandle);
+void ASCharacter::SpawnProjectile(TSubclassOf<AActor> ClassToSpawn, EProjectileSpawnLocation SpawnLoc)
+{
+	if (ensure(ClassToSpawn))
+	{
+
+		FActorSpawnParameters spawnParams;
+		spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		spawnParams.Instigator = this;
+
+
+		FTransform 	spawnTM;
+		spawnTM = AimAtTarget(SpawnLoc);
+
+		GetWorld()->SpawnActor<AActor>(ClassToSpawn, spawnTM, spawnParams);
+	}
 }
 
 void ASCharacter::PrimaryAttack_TimeEclipse()
 {
-	FActorSpawnParameters spawnParams;
-	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	spawnParams.Instigator = this;
-
-	FTransform 	spawnTM;
-	spawnTM = AimatTarget();
-
-	GetWorld()->SpawnActor<AActor>(projectileClass, spawnTM, spawnParams);
+	SpawnProjectile(projectileClass, EProjectileSpawnLocation::RHand);
 }
 
 void ASCharacter::BlackholeAttack_TimeEclipse()
 {
-	FActorSpawnParameters spawnParams;
-	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	spawnParams.Instigator = this;
-
-	FTransform 	spawnTM;
-	spawnTM = AimatTarget();
-
-	GetWorld()->SpawnActor<AActor>(BlackholeClass, spawnTM, spawnParams);
+	SpawnProjectile(BlackholeClass, EProjectileSpawnLocation::RHand);
 }
 
 void ASCharacter::Dash_TimeEclipese()
 {
-	FActorSpawnParameters spawnParams;
-	spawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	spawnParams.Instigator = this;
-
-	FTransform 	spawnTM;
-	spawnTM = AimatTarget();
-
-	GetWorld()->SpawnActor<AActor>(DashProjectileClass, spawnTM, spawnParams);
+	SpawnProjectile(DashProjectileClass, EProjectileSpawnLocation::LHand);
 }
 
 void ASCharacter::Jump()
@@ -225,11 +285,27 @@ void ASCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ASCharacter::Jump);
 
 	PlayerInputComponent->BindAction("PrimaryInteract", IE_Pressed, this, &ASCharacter::PrimaryInteract);
-	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ASCharacter::Dash);
+	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ASCharacter::DashAttack);
 }
 
 FVector ASCharacter::GetPawnViewLocation() const
 {
 	return CameraComp->GetComponentLocation();
 }
+
+void ASCharacter::OnHealthChange(AActor* InstigatorActor, USAttributeComponent* Attricomp, float NewHealth, float Delta)
+{
+	if (NewHealth<=0.f&&Delta<0.f)
+	{
+		APlayerController* PC = Cast<APlayerController>(GetController());
+		DisableInput(PC);
+	}
+	if (Delta < 0.f)
+	{
+		GetMesh()->SetScalarParameterValueOnMaterials("HitFlashTime", GetWorld()->TimeSeconds);
+	}
+
+}
+
+
 

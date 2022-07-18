@@ -6,6 +6,7 @@
 #include <Particles/ParticleSystemComponent.h>
 #include <GameFramework/ProjectileMovementComponent.h>
 #include "DrawDebugHelpers.h"
+#include <SAttributeComponent.h>
 
 // Sets default values
 ASMagicProjectile::ASMagicProjectile()
@@ -15,7 +16,9 @@ ASMagicProjectile::ASMagicProjectile()
 
 	SphereComp->SetSphereRadius(20.0f);
 	
+	movementComp->InitialSpeed = 2000.f;
 	
+	DamageAmount = 50.f;
 }
 
 // Called when the game starts or when spawned
@@ -29,31 +32,17 @@ void ASMagicProjectile::OnActorOverlap(UPrimitiveComponent* OverlappedComponent,
 {
 	if (OtherActor && OtherActor != GetInstigator())
 	{
-		//static FGameplayTag Tag = FGameplayTag::RequestGameplayTag("Status.Parrying");
+		//simple
+		USAttributeComponent* AttributeComp = Cast<USAttributeComponent>(OtherActor->GetComponentByClass(USAttributeComponent::StaticClass()));
+		if (AttributeComp)
+		{
+			AttributeComp->ApplyHealthChange(-DamageAmount);
+		}
 
-		//// Parry Ability (GameplayTag Example)
-		//USActionComponent* ActionComp = Cast<USActionComponent>(OtherActor->GetComponentByClass(USActionComponent::StaticClass()));
-		//if (ActionComp && ActionComp->ActiveGameplayTags.HasTag(ParryTag))
-		//{
-		//	MoveComp->Velocity = -MoveComp->Velocity;
-
-		//	SetInstigator(Cast<APawn>(OtherActor));
-		//	return;
-		//}
-
-		//// Apply Damage & Impulse
-		//if (USGameplayFunctionLibrary::ApplyDirectionalDamage(GetInstigator(), OtherActor, DamageAmount, SweepResult))
-		//{
-		//	// We only explode if the target can be damaged, it ignores anything it Overlaps that it cannot Damage (it requires an AttributeComponent on the target)
-		//	Explode();
-
-		//	if (ActionComp && BurningActionClass && HasAuthority())
-		//	{
-		//		ActionComp->AddAction(GetInstigator(), BurningActionClass);
-		//	}
-		//}
+		Explode();
 	}
 }
+
 
 void ASMagicProjectile::PostInitializeComponents()
 {
