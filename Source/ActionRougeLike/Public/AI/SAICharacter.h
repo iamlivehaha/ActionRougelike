@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "SAICharacter.generated.h"
+class UPawnSensingComponent;
 
 UCLASS()
 class ACTIONROUGELIKE_API ASAICharacter : public ACharacter
@@ -16,9 +17,16 @@ public:
 	ASAICharacter();
 
 protected:
+	UPROPERTY(VisibleAnywhere, Category = "Components")
+		UPawnSensingComponent* PawnSensingComp;
+
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void PostInitializeComponents() override;
+
+	UFUNCTION()
+		void OnPawnSeen(APawn* Pawn);
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
